@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-  const propfeatures = sequelize.define("propfeatures", {
+  const prop_features = sequelize.define("prop_features", {
     pool: {
       type: DataTypes.BOOLEAN,
     },
@@ -54,10 +54,10 @@ module.exports = (sequelize, DataTypes) => {
         unique: true
     }
   });
-  propfeatures.associate = (models) => {
-    propfeatures.belongsTo(models.properties, { foreignKey: "propId", as: "properties", allowNull: false });
+  prop_features.associate = (models) => {
+    prop_features.belongsTo(models.properties, { foreignKey: "propId", as: "properties", allowNull: false });
   };
-  return propfeatures;
+  return prop_features;
 };
 
 // const temp = {
