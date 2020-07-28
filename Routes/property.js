@@ -11,96 +11,10 @@ router.get("/", (req, res) => {
   let rating = req.query.rating;
   let category = req.query.category;
   let propFeatures = req.query.propFeatures;
-
-  if (pageNum != undefined && pageNum > 0) {
-    pageNum = (pageNum - 1) * 20;
-  } else {
-    pageNum = 0;
-  }
-
-  if (rating === undefined) {
-    console.log("rating", rating);
-    rating = [1, 2, 3, 4, 5];
-  } else {
-    rating = rating.split(",");
-  }
-
-  if (category === undefined) {
-    console.log("category", category);
-    category = ["Apartment", "House", "Villa", "Cottage"];
-  } else {
-    category = category.split(",");
-  }
-
-  if (propFeatures != undefined) {
-    propFeatures = propFeatures.split(",");
-    console.log("propFeatures >>>>>>>>>>>>>>>>>>", propFeatures);
-    let query =
-      "SELECT * from properties JOIN prop_features ON properties.id = prop_features.propId WHERE properties.rating IN (:rating) AND properties.category IN (:category) ";
-    propFeatures.forEach((feature) => {
-      query += ` AND prop_features.${feature} = true`;
-    });
-    console.log(query);
-    db.sequelize
-      .query(`${query} LIMIT :offset, 20`, {
-        replacements: {
-          rating: rating,
-          category: category,
-          offset: pageNum,
-        },
-        type: QueryTypes.SELECT,
-      })
-      .then((result) => res.send(result))
-      .catch((err) => {
-        console.log(err);
-        res.status(500).json({ errormsg: "Internal Server Error" });
-      });
-  } else {
-    db.sequelize
-      .query(
-        "SELECT COUNT(*) AS propCount FROM properties WHERE rating IN (:rating) AND category IN (:category) ",
-        {
-          replacements: {
-            rating: rating,
-            category: category,
-          },
-          type: QueryTypes.SELECT,
-        }
-      )
-      .then(async (result) => {
-        result = result[0];
-        result.properties = await db.sequelize.query(
-          "SELECT id, title, category, sleeps, bedRooms, bathRooms, halfBaths, area, minStay, pricePerNight, totalPrice, rating from Properties WHERE rating IN (:rating) AND category IN (:category) LIMIT :offset, 20",
-          {
-            replacements: {
-              rating: rating,
-              category: category,
-              offset: pageNum,
-            },
-            type: QueryTypes.SELECT,
-          }
-        );
-        return result;
-      })
-      .then((result) => res.send(result))
-      .catch((err) => {
-        console.log(err);
-        res.status(500).json({ errormsg: "Internal Server Error" });
-      });
-  }
-});
-
-router.get("/filter", (req, res) => {
-  console.log("filkewrerererer");
-  let pageNum = req.query.pageNum;
-  let rating = req.query.rating;
-  let category = req.query.category;
-  let propFeatures = req.query.propFeatures;
   let locationtype = req.query.locationtype;
   let neighbourhoods = req.query.neighbourhoods;
   let bookOptions = req.query.bookOptions;
   
-  console.log("propFeatures >>>>>>>>>>>>>>>>>>", propFeatures, locationtype);
   let locationJoin = "";
   let featureJoin = "";
   let neighbourJoin = "";
@@ -115,14 +29,12 @@ router.get("/filter", (req, res) => {
   }
 
   if (rating === undefined) {
-    console.log("rating", rating);
     rating = [1, 2, 3, 4, 5];
   } else {
     rating = rating.split(",");
   }
 
   if (category === undefined) {
-    console.log("category", category);
     category = ["Apartment", "House", "Villa", "Cottage", "test"];
   } else {
     category = category.split(",");
@@ -164,7 +76,6 @@ router.get("/filter", (req, res) => {
     );
   }
 
-  console.log("query location ???????????????????????", query);
   query = `SELECT * from properties ${featureJoin} ${locationJoin} ${neighbourJoin} ${bookOptionJoin} WHERE properties.rating IN (:rating) AND properties.category IN (:category) `;
   query += whereClause;
 
@@ -205,12 +116,17 @@ router.get("/filter", (req, res) => {
 // http://localhost:3000/listing?rating=1,2,3&category=House&locationtype=Oceanfront,Beachfront,Beach,Beachview&neighbourhoods=OceanLakes,MyrtleBeachResort,KingstonPlantation,OceanCreekResort&bookOption=freeCan,InstantCon&propFeatures=Pool,Kitchen,AirConditioning
 
 router.get("/getTotalPageNum", async (req, res) => {
-  const totalPropertiesCount = await db.properties.count();
+  try {
+    const totalPropertiesCount = await db.properties.count();
+    res.send({
+      TotalPageNum: totalPropertiesCount / 20,
+      totalPropertiesCount: totalPropertiesCount,
+    });
+  } catch(err) {
+    console.log(err);
+    res.status(500).json({errmsg: "Internal Server Error"});
+  }
 
-  res.send({
-    TotalPageNum: totalPropertiesCount / 20,
-    totalPropertiesCount: totalPropertiesCount,
-  });
 });
 
 router.get("/:id", (req, res) => {
@@ -226,7 +142,11 @@ router.get("/:id", (req, res) => {
         type: QueryTypes.SELECT,
       }
     )
-    .then((result) => res.send(result));
+    .then((result) => res.send(result))
+    .catch(err => {
+      console.log(err);
+      res.status(500).json({errmsg: "Internal Server Error"});
+    });
 });
 
 // router.post('/add', (req, res) => {
