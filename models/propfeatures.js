@@ -12,6 +12,12 @@ module.exports = (sequelize, DataTypes) => {
     washer: {
       type: DataTypes.BOOLEAN,
     },
+    allowPets: {
+      type: DataTypes.BOOLEAN,
+    },
+    maxGuestCount: {
+      type: DataTypes.INTEGER,
+    },
     dryer: {
       type: DataTypes.BOOLEAN,
     },

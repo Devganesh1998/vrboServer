@@ -10,55 +10,6 @@ router.get("/", (req, res) => {
   let pageNum = req.query.pageNum;
   let rating = req.query.rating;
   let category = req.query.category;
-
-  console.log(pageNum, rating);
-
-  if (pageNum != undefined && pageNum > 0) {
-    pageNum = (pageNum - 1) * 20;
-  } else {
-    pageNum = 0;
-  }
-
-  if (rating === undefined) {
-    console.log("rating", rating);
-    rating = [1, 2, 3, 4, 5];
-  } else {
-    rating = rating.split(",");
-  }
-
-  if (category === undefined) {
-    console.log("category", category);
-    category = ["Apartment", "House", "Villa", "Cottage"];
-  } else {
-    category = category.split(",");
-  }
-
-  db.properties
-    .findAndCountAll({
-      attributes: { exclude: ["id", "createdAt", "updatedAt"] },
-      offset: pageNum,
-      limit: 20,
-      where: {
-        rating: rating,
-        category: category,
-      },
-    })
-    .then((result) => {
-      res.send({
-        propCount: result.count,
-        properties: result.rows,
-      });
-    })
-    .catch((err) => {
-      console.log(err);
-      res.status(500).json({ errormsg: "Internal Server Error" });
-    });
-});
-
-router.get("/filter", (req, res) => {
-  let pageNum = req.query.pageNum;
-  let rating = req.query.rating;
-  let category = req.query.category;
   let propFeatures = req.query.propFeatures;
 
   if (pageNum != undefined && pageNum > 0) {
@@ -82,7 +33,28 @@ router.get("/filter", (req, res) => {
   }
 
   if (propFeatures != undefined) {
-    res.send("not yet");
+    propFeatures = propFeatures.split(",");
+    console.log("propFeatures >>>>>>>>>>>>>>>>>>", propFeatures);
+    let query =
+      "SELECT * from properties JOIN prop_features ON properties.id = prop_features.propId WHERE properties.rating IN (:rating) AND properties.category IN (:category) ";
+    propFeatures.forEach((feature) => {
+      query += ` AND prop_features.${feature} = true`;
+    });
+    console.log(query);
+    db.sequelize
+      .query(`${query} LIMIT :offset, 20`, {
+        replacements: {
+          rating: rating,
+          category: category,
+          offset: pageNum,
+        },
+        type: QueryTypes.SELECT,
+      })
+      .then((result) => res.send(result))
+      .catch((err) => {
+        console.log(err);
+        res.status(500).json({ errormsg: "Internal Server Error" });
+      });
   } else {
     db.sequelize
       .query(
@@ -98,7 +70,7 @@ router.get("/filter", (req, res) => {
       .then(async (result) => {
         result = result[0];
         result.properties = await db.sequelize.query(
-          "SELECT title, category, sleeps, bedRooms, bathRooms, halfBaths, area, minStay, pricePerNight, totalPrice, rating from Properties WHERE rating IN (:rating) AND category IN (:category) LIMIT :offset, 20",
+          "SELECT id, title, category, sleeps, bedRooms, bathRooms, halfBaths, area, minStay, pricePerNight, totalPrice, rating from Properties WHERE rating IN (:rating) AND category IN (:category) LIMIT :offset, 20",
           {
             replacements: {
               rating: rating,
@@ -118,6 +90,118 @@ router.get("/filter", (req, res) => {
   }
 });
 
+router.get("/filter", (req, res) => {
+  console.log("filkewrerererer");
+  let pageNum = req.query.pageNum;
+  let rating = req.query.rating;
+  let category = req.query.category;
+  let propFeatures = req.query.propFeatures;
+  let locationtype = req.query.locationtype;
+  let neighbourhoods = req.query.neighbourhoods;
+  let bookOptions = req.query.bookOptions;
+  
+  console.log("propFeatures >>>>>>>>>>>>>>>>>>", propFeatures, locationtype);
+  let locationJoin = "";
+  let featureJoin = "";
+  let neighbourJoin = "";
+  let bookOptionJoin = "";
+  let query = ``;
+  let whereClause = '';
+
+  if (pageNum != undefined && pageNum > 0) {
+    pageNum = (pageNum - 1) * 20;
+  } else {
+    pageNum = 0;
+  }
+
+  if (rating === undefined) {
+    console.log("rating", rating);
+    rating = [1, 2, 3, 4, 5];
+  } else {
+    rating = rating.split(",");
+  }
+
+  if (category === undefined) {
+    console.log("category", category);
+    category = ["Apartment", "House", "Villa", "Cottage", "test"];
+  } else {
+    category = category.split(",");
+  }
+
+  if (locationtype != undefined) {
+    locationJoin =
+      "JOIN prop_locations ON prop_locations.propId = properties.id";
+    locationtype = locationtype.split(",");
+    locationtype.forEach(
+      (location) => (whereClause += ` AND prop_locations.${location} = true`)
+    );  
+  }
+
+  if (propFeatures != undefined) {
+    featureJoin = "JOIN prop_features ON properties.id = prop_features.propId";
+    propFeatures = propFeatures.split(",");
+    propFeatures.forEach(
+      (feature) => (whereClause += ` AND prop_features.${feature} = true`)
+    );
+  }
+
+  if (bookOptions != undefined) {
+    bookOptionJoin =
+      "JOIN prop_bookopts ON prop_bookopts.propId = properties.id";
+    bookOptions = bookOptions.split(",");
+    bookOptions.forEach(
+      (bookopt) => (whereClause += ` AND prop_bookopts.${bookopt} = true`)
+    );
+  }
+
+  if (neighbourhoods != undefined) {
+    neighbourJoin =
+      "JOIN prop_neighbourhoods ON prop_neighbourhoods.propId = properties.id";
+    neighbourhoods = neighbourhoods.split(",");
+    neighbourhoods.forEach(
+      (neighbourhood) =>
+        (whereClause += ` AND prop_neighbourhoods.${neighbourhood} = true`)
+    );
+  }
+
+  console.log("query location ???????????????????????", query);
+  query = `SELECT * from properties ${featureJoin} ${locationJoin} ${neighbourJoin} ${bookOptionJoin} WHERE properties.rating IN (:rating) AND properties.category IN (:category) `;
+  query += whereClause;
+
+  db.sequelize
+    .query(
+      `SELECT COUNT(*) AS propCount FROM properties ${featureJoin} ${locationJoin} ${neighbourJoin} ${bookOptionJoin} WHERE properties.rating IN (:rating) AND properties.category IN (:category)`,
+      {
+        replacements: {
+          rating: rating,
+          category: category,
+        },
+        type: QueryTypes.SELECT,
+      }
+    )
+    .then(async (result) => {
+      result = result[0];
+
+      result.properties = await db.sequelize.query(
+        `${query} LIMIT :offset, 20`,
+        {
+          replacements: {
+            rating: rating,
+            category: category,
+            offset: pageNum,
+          },
+          type: QueryTypes.SELECT,
+        }
+      );
+      return result;
+    })
+    .then((result) => res.send(result))
+    .catch((err) => {
+      console.log(err);
+      res.status(500).json({ errormsg: "Internal Server Error" });
+    });
+});
+
 // http://localhost:3000/listing?rating=1,2,3&category=House&locationtype=Oceanfront,Beachfront,Beach,Beachview&neighbourhoods=OceanLakes,MyrtleBeachResort,KingstonPlantation,OceanCreekResort&bookOption=freeCan,InstantCon&propFeatures=Pool,Kitchen,AirConditioning
 
 router.get("/getTotalPageNum", async (req, res) => {
@@ -127,6 +211,22 @@ router.get("/getTotalPageNum", async (req, res) => {
     TotalPageNum: totalPropertiesCount / 20,
     totalPropertiesCount: totalPropertiesCount,
   });
+});
+
+router.get("/:id", (req, res) => {
+  const id = req.params.id;
+
+  db.sequelize
+    .query(
+      `SELECT * from properties JOIN prop_features ON properties.id = prop_features.propId JOIN prop_locations ON prop_locations.propId = properties.id JOIN prop_neighbourhoods ON prop_neighbourhoods.propId = properties.id JOIN prop_bookopts ON prop_bookopts.propId = properties.id WHERE properties.id = :id`,
+      {
+        replacements: {
+          id: id,
+        },
+        type: QueryTypes.SELECT,
+      }
+    )
+    .then((result) => res.send(result));
 });
 
 // router.post('/add', (req, res) => {
@@ -151,11 +251,11 @@ router.get("/getTotalPageNum", async (req, res) => {
 //     }
 // });
 
-// router.post("/addFeatures", (req, res) => {
+// router.post("/addFeatures", async (req, res) => {
 //   const prop = req.body.properties;
 
 //   for (let i = 0; i < prop.length; ++i) {
-//     db.prop_features.create({
+//     await db.prop_features.create({
 //       pool: prop[i].pool,
 //       privatepool: prop[i].privatepool,
 //       wifi: prop[i].wifi,
@@ -172,9 +272,13 @@ router.get("/getTotalPageNum", async (req, res) => {
 //       dishwasher: prop[i].dishwasher,
 //       fire_place: prop[i].fire_place,
 //       microwave: prop[i].microwave,
-//       propId: i + 1,
+//       maxGuestCount: prop[i].maxGuestCount,
+//       allowPets: prop[i].allowPets,
+//       propId: i + 201,
 //     });
 //   }
+
+//   res.send("done");
 // });
 
 // router.post("/addlocations", async (req, res) => {
@@ -218,19 +322,19 @@ router.get("/getTotalPageNum", async (req, res) => {
 //   res.send("done");
 // });
 
-router.post("/addbookopt", async (req, res) => {
-  const prop = req.body.properties;
+// router.post("/addbookopt", async (req, res) => {
+//   const prop = req.body.properties;
 
-  for (let i = 0; i < prop.length; ++i) {
-    await db.prop_bookopts.create({
-      freeCancellation: prop[i].freeCancellation,
-      instantConfirmation: prop[i].instantConfirmation,
-      dayConformation: prop[i].dayConformation,
-      propId: i + 1,
-    });
-  }
+//   for (let i = 0; i < prop.length; ++i) {
+//     await db.prop_bookopts.create({
+//       freeCancellation: prop[i].freeCancellation,
+//       instantConfirmation: prop[i].instantConfirmation,
+//       dayConformation: prop[i].dayConformation,
+//       propId: i + 1,
+//     });
+//   }
 
-  res.send("done");
-});
+//   res.send("done");
+// });
 
 module.exports = router;
