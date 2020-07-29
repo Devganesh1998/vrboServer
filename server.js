@@ -16,6 +16,10 @@ app.use(morgan("dev"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+app.get('/info', (req, res) => {
+  res.send("Welcome to Vrbo Server");
+});
+
 const apiRoutes = require("./Routes");
 app.use("/", apiRoutes);
 
