@@ -14,13 +14,12 @@ router.get("/", (req, res) => {
   let locationtype = req.query.locationtype;
   let neighbourhoods = req.query.neighbourhoods;
   let bookOptions = req.query.bookOptions;
-  
   let locationJoin = "";
   let featureJoin = "";
   let neighbourJoin = "";
   let bookOptionJoin = "";
   let query = ``;
-  let whereClause = '';
+  let whereClause = "";
 
   if (pageNum != undefined && pageNum > 0) {
     pageNum = (pageNum - 1) * 20;
@@ -46,7 +45,7 @@ router.get("/", (req, res) => {
     locationtype = locationtype.split(",");
     locationtype.forEach(
       (location) => (whereClause += ` AND prop_locations.${location} = true`)
-    );  
+    );
   }
 
   if (propFeatures != undefined) {
@@ -81,20 +80,19 @@ router.get("/", (req, res) => {
 
   db.sequelize
     .query(
-      `SELECT COUNT(*) AS propCount FROM properties ${featureJoin} ${locationJoin} ${neighbourJoin} ${bookOptionJoin} WHERE properties.rating IN (:rating) AND properties.category IN (:category)`,
+      `SELECT COUNT(*) AS propCount FROM properties ${featureJoin} ${locationJoin} ${neighbourJoin} ${bookOptionJoin} WHERE properties.rating IN (:rating) AND properties.category IN (:category) ${whereClause}`,
       {
         replacements: {
           rating: rating,
           category: category,
         },
         type: QueryTypes.SELECT,
-      }
-    )
+    })
     .then(async (result) => {
       result = result[0];
 
       result.properties = await db.sequelize.query(
-        `${query} LIMIT :offset, 20`,
+        `${query} LIMIT :offset, 20;`,
         {
           replacements: {
             rating: rating,
@@ -122,11 +120,10 @@ router.get("/getTotalPageNum", async (req, res) => {
       TotalPageNum: totalPropertiesCount / 20,
       totalPropertiesCount: totalPropertiesCount,
     });
-  } catch(err) {
+  } catch (err) {
     console.log(err);
-    res.status(500).json({errmsg: "Internal Server Error"});
+    res.status(500).json({ errmsg: "Internal Server Error" });
   }
-
 });
 
 router.get("/:id", (req, res) => {
@@ -142,10 +139,12 @@ router.get("/:id", (req, res) => {
         type: QueryTypes.SELECT,
       }
     )
-    .then((result) => res.send(result))
-    .catch(err => {
+    .then((result) => {
+      res.send(result);
+    })
+    .catch((err) => {
       console.log(err);
-      res.status(500).json({errmsg: "Internal Server Error"});
+      res.status(500).json({ errmsg: "Internal Server Error" });
     });
 });
 
