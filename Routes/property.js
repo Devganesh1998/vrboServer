@@ -87,7 +87,8 @@ router.get("/", (req, res) => {
           category: category,
         },
         type: QueryTypes.SELECT,
-    })
+      }
+    )
     .then(async (result) => {
       result = result[0];
 
@@ -126,12 +127,46 @@ router.get("/getTotalPageNum", async (req, res) => {
   }
 });
 
+router.get('/getTotalCost', (req, res) => {
+  const arrivalDate = req.query.arrivalDate;
+  const destinationDate = req.query.destinationDate;
+  const adultsCount = req.query.adultsCount;
+  const childrenCount = req.query.childrenCount;
+  const propId = req.query.propId;
+
+  const startDate = new Date(arrivalDate);
+  const endDate = new Date(destinationDate);
+
+  const timeDiff = endDate.getTime() - startDate.getTime();
+  console.log("Difference_In_Days>>>>>>>>>>>>>>", startDate, endDate);
+
+  const Difference_In_Days = timeDiff / (1000 * 3600 * 24); 
+
+
+  db.sequelize.query('SELECT pricePerNight from properties WHERE id = :propId', {
+    replacements: {
+      propId: propId
+    },
+    type: QueryTypes.SELECT
+  }).then(result => {
+    const price = Number(result[0].pricePerNight);
+    console.log(price);
+    let total = ((Number(adultsCount) + Number(childrenCount)) / 3) * price;
+    total = Difference_In_Days * price;
+    console.log("total>>>>>>>>>>>>>>>>>>>>>>", total);
+    res.send({totalPrice: total});
+  }).catch(err => {
+    console.log(err);
+    res.status(500).json({errmsg: "Internal Server Error"});
+  })
+});
+
 router.get("/:id", (req, res) => {
   const id = req.params.id;
 
   db.sequelize
     .query(
-      `SELECT * from properties JOIN prop_features ON properties.id = prop_features.propId JOIN prop_locations ON prop_locations.propId = properties.id JOIN prop_neighbourhoods ON prop_neighbourhoods.propId = properties.id JOIN prop_bookopts ON prop_bookopts.propId = properties.id WHERE properties.id = :id`,
+      `SELECT * from properties JOIN prop_neighbourhoods ON prop_neighbourhoods.propId = properties.id JOIN prop_bookopts ON prop_bookopts.propId = properties.id WHERE properties.id = :id`,
       {
         replacements: {
           id: id,
@@ -139,7 +174,89 @@ router.get("/:id", (req, res) => {
         type: QueryTypes.SELECT,
       }
     )
+    .then(async (result) => {
+      const features = await db.sequelize.query(
+        "SELECT * from prop_features WHERE propId = :propId",
+        {
+          replacements: {
+            propId: id,
+          },
+          type: QueryTypes.SELECT,
+        }
+      );
+      const res_features = [];
+      Object.keys(features[0]).forEach((key) => {
+        if (
+          key != "id" &&
+          key != "propId" &&
+          key != "createdAt" &&
+          key != "updatedAt" &&
+          key != "maxGuestCount"
+        ) {
+          if (features[0][key]) {
+            res_features.push(key);
+          }
+        }
+      });
+      result = result[0];
+      result.features = res_features;
+      return result;
+    })
+    .then(async (result) => {
+      const locations = await db.sequelize.query(
+        "SELECT * from prop_locations WHERE propId = :propId",
+        {
+          replacements: {
+            propId: id,
+          },
+          type: QueryTypes.SELECT,
+        }
+      );
+      const res_locations = [];
+      Object.keys(locations[0]).forEach((key) => {
+        if (
+          key != "id" &&
+          key != "propId" &&
+          key != "createdAt" &&
+          key != "updatedAt"
+        ) {
+          if (locations[0][key]) {
+            res_locations.push(key);
+          }
+        }
+      });
+      result.locations = res_locations;
+      return result;
+    })
+    .then(async (result) => {
+      const genFeatures = await db.sequelize.query(
+        "SELECT * from prop_gen_features WHERE propId = :propId",
+        {
+          replacements: {
+            propId: id,
+          },
+          type: QueryTypes.SELECT,
+        }
+      );
+      const res_genFeatures = [];
+      Object.keys(genFeatures[0]).forEach((key) => {
+        if (
+          key != "id" &&
+          key != "propId" &&
+          key != "createdAt" &&
+          key != "updatedAt"
+        ) {
+          if (genFeatures[0][key]) {
+            res_genFeatures.push(key);
+          }
+        }
+      });
+      result.genFeatures = res_genFeatures;
+      console.log(result);
+      return result;
+    })
     .then((result) => {
+      result.bookedDates = [{startDate: "08/02/2020", endDate: "08/09/2020"}]
       res.send(result);
     })
     .catch((err) => {
@@ -173,27 +290,29 @@ router.get("/:id", (req, res) => {
 // router.post("/addFeatures", async (req, res) => {
 //   const prop = req.body.properties;
 
+// router.post("/addgenFeatures", async (req, res) => {
+//   const prop = req.body.properties;
+
 //   for (let i = 0; i < prop.length; ++i) {
-//     await db.prop_features.create({
-//       pool: prop[i].pool,
-//       privatepool: prop[i].privatepool,
-//       wifi: prop[i].wifi,
-//       washer: prop[i].washer,
-//       dryer: prop[i].dryer,
-//       stove: prop[i].stove,
-//       oven: prop[i].oven,
-//       air_con: prop[i].air_con,
-//       parking: prop[i].parking,
-//       tv: prop[i].tv,
-//       hot_tub: prop[i].hot_tub,
-//       bed_linens: prop[i].bed_linens,
-//       outdoor_grill: prop[i].outdoor_grill,
-//       dishwasher: prop[i].dishwasher,
-//       fire_place: prop[i].fire_place,
-//       microwave: prop[i].microwave,
-//       maxGuestCount: prop[i].maxGuestCount,
-//       allowPets: prop[i].allowPets,
-//       propId: i + 201,
+//     await db.prop_gen_features.create({
+//       Telephone: prop[i].Telephone,
+//       'Air Conditioning': prop[i]['Air Conditioning'],
+//       Heating: prop[i].Heating,
+//       'Lines Provided': prop[i]['Lines Provided'],
+//       "Washing Machine": prop[i]["Washing Machine"],
+//       "Clothes Dryer": prop[i]["Clothes Dryer"],
+//       Parking: prop[i].Parking,
+//       "Towels Provided": prop[i]["Towels Provided"],
+//       "FitnessRoom/ Equipment": prop[i]["FitnessRoom/ Equipment"],
+//       "Iron & Board": prop[i]["Iron & Board"],
+//       "Hair Dryer": prop[i]["Hair Dryer"],
+//       Elevator: prop[i].Elevator,
+//       "Living Room": prop[i]["Living Room"],
+//       "Bed linens provided": prop[i]["Bed linens provided"],
+//       "Iron and board": prop[i]["Iron and board"],
+//       Crib: prop[i].Crib,
+//       'Kids high chair': prop[i]['Kids high chair'],
+//       propId: prop[i].propId,
 //     });
 //   }
 
