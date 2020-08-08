@@ -75,7 +75,7 @@ router.get("/", (req, res) => {
     );
   }
 
-  query = `SELECT * from properties ${featureJoin} ${locationJoin} ${neighbourJoin} ${bookOptionJoin} WHERE properties.rating IN (:rating) AND properties.category IN (:category) `;
+  query = `SELECT * from properties JOIN prop_geos ON properties.id = prop_geos.propId ${featureJoin} ${locationJoin} ${neighbourJoin} ${bookOptionJoin} WHERE properties.rating IN (:rating) AND properties.category IN (:category) `;
   query += whereClause;
 
   db.sequelize
@@ -166,7 +166,7 @@ router.get("/:id", (req, res) => {
 
   db.sequelize
     .query(
-      `SELECT * from properties JOIN prop_neighbourhoods ON prop_neighbourhoods.propId = properties.id JOIN prop_bookopts ON prop_bookopts.propId = properties.id WHERE properties.id = :id`,
+      `SELECT * from properties JOIN prop_geos ON properties.id = prop_geos.propId JOIN prop_neighbourhoods ON prop_neighbourhoods.propId = properties.id JOIN prop_bookopts ON prop_bookopts.propId = properties.id WHERE properties.id = :id`,
       {
         replacements: {
           id: id,
@@ -239,6 +239,7 @@ router.get("/:id", (req, res) => {
         }
       );
       const res_genFeatures = [];
+      console.log(genFeatures);
       Object.keys(genFeatures[0]).forEach((key) => {
         if (
           key != "id" &&
@@ -263,6 +264,147 @@ router.get("/:id", (req, res) => {
       console.log(err);
       res.status(500).json({ errmsg: "Internal Server Error" });
     });
+});
+
+
+router.post("/addGeo", async (req, res) => {
+  const prop = req.body.properties;
+
+  const img = [
+    "https://odis.homeaway.com/odis/listing/e4559c88-6cd7-4306-88dd-29c4f64909ae.f10.jpg",
+    "https://odis.homeaway.com/odis/listing/ef5a6b91-6c7a-4012-a4be-e56390bb59a4.f10.jpg",
+    "https://odis.homeaway.com/odis/listing/b7ed0e08-29a2-498c-a700-ec446ad75e27.f10.jpg",
+    "https://odis.homeaway.com/odis/destination/5941b1e0-2600-4b2a-b27e-c667abf7e510.carousel-m.jpg",
+    "https://odis.homeaway.com/odis/destination/adf45333-140a-40cf-987f-bc49b711c3d9.carousel-m.jpg",
+    "https://odis.homeaway.com/odis/destination/397eabda-51d4-45d4-82c8-da3ad409ff84.carousel-m.jpg",
+    "https://odis.homeaway.com/odis/listing/aa2f8623-a207-4980-881c-6af5310d73cf.f10.jpg",
+    "https://odis.homeaway.com/odis/listing/7e8764b2-8fa5-4ba7-8722-2442a2733f94.f10.jpg",
+    "https://odis.homeaway.com/odis/listing/531a953a-3693-4882-9f2a-c1cd709a3aab.f10.jpg",
+    "https://odis.homeaway.com/odis/listing/c3b29a23-e507-46e0-8318-4cdbdef67673.f10.jpg",
+    "https://odis.homeaway.com/odis/listing/10a2ed33-55db-45a5-93d7-560f6517a48a.f10.jpg",
+    "https://media.vrbo.com/lodging/34000000/33970000/33961500/33961403/ba98a91f.f10.jpg",
+    "https://media.vrbo.com/lodging/34000000/33970000/33961500/33961403/ba98a91f.f10.jpg",
+    "https://media.vrbo.com/lodging/34000000/33970000/33961500/33961403/fd6c4fa0.f10.jpg",
+    "https://media.vrbo.com/lodging/34000000/33970000/33961500/33961403/c24bcb3f.f10.jpg",
+    "https://odis.homeaway.com/odis/listing/a5a64026-8a43-4d75-a143-94a51a775783.f10.jpg",
+    "https://odis.homeaway.com/odis/listing/2d14f3d2-d1aa-4ee3-ad61-686d3c2c3fd6.f10.jpg",
+    "https://odis.homeaway.com/odis/listing/00dff347-69a4-4049-8584-c46f2a113d7f.f10.jpg"
+  ];
+  
+  const geoLocations = [
+    {
+      lat: 8.8932,
+      long: 76.6141
+    },
+    {
+      lat: 10.5276,
+      long: 76.2144
+    },
+    {
+      lat: 11.8745,
+      long:  75.3704
+    },
+    {
+      lat: 9.4981,
+      long: 76.3388
+    },
+    {
+      lat: 9.5916,
+      long: 76.5222
+    },
+    {
+      lat: 10.7867,
+      long: 76.6548
+    },
+    {
+      lat: 11.0510,
+      long: 76.0711
+    },
+    {
+      lat: 11.1203,
+      long: 76.1199
+    },
+    {
+      lat: 10.2277,
+      long: 76.1971
+    },
+    {
+      lat: 11.7491,
+      long: 75.4890
+    },
+    {
+      lat: 9.9487,
+      long: 76.3464
+    },
+    {
+      lat: 10.7677,
+      long: 75.9259
+    },
+    {
+      lat: 10.0327,
+      long: 76.3319
+    },
+    {
+      lat: 11.6016,
+      long: 75.5920
+    },
+    {
+      lat: 12.3311,
+      long: 75.0915
+    },
+    {
+      lat: 12.0351,
+      long: 75.3611
+    },
+    {
+      lat: 11.4429,
+      long: 75.6976
+    },
+    {
+      lat: 11.0540,
+      long: 75.8555
+    },
+    {
+      lat: 8.4027,
+      long: 77.0861
+    },
+    {
+      lat: 10.0531,
+      long: 76.3528
+    },
+    {
+      lat: 11.1736,
+      long: 75.8040
+    },
+    {
+      lat: 11.6016,
+      long: 75.5920
+    },
+    {
+      lat: 9.931233,
+      long: 76.267303
+    },
+    {
+      lat: 8.5241,
+      long: 76.9366
+    },
+    {
+      lat: 10.5276,
+      long: 76.2144
+    },
+  ];
+
+  for (let i = 0; i < prop.length; ++i) {
+    await db.prop_geos.create({
+      description: prop[i].description,
+      latitude: geoLocations[i % geoLocations.length].lat,
+      longitude: geoLocations[i % geoLocations.length].long,
+      imgsrc: img[i % img.length],
+      propId: i + 484 + 1,
+    });
+  }
+
+  res.send("done");
 });
 
 // router.post('/add', (req, res) => {

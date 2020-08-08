@@ -1,6 +1,6 @@
 module.exports = {
   "development": {
-    "username": "root",
+    "username": "deva",
     "password": process.env.DEV_PASSWORD,
     "database": "vrbo",
     "host": "127.0.0.1",
