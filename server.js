@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const fs = require('fs');
+const https = require('https');
 const express = require("express");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
@@ -7,6 +9,10 @@ const cors = require("cors");
 
 const PORT = process.env.PORT || 3000;
 
+var privateKey  = fs.readFileSync('sslcert/privkey.pem', 'utf8');
+var certificate = fs.readFileSync('sslcert/fullchain.pem', 'utf8');
+
+const credentials = {key: privateKey, cert: certificate};
 const db = require("./models");
 
 const app = express();
@@ -23,8 +29,10 @@ app.get('/info', (req, res) => {
 const apiRoutes = require("./Routes");
 app.use("/", apiRoutes);
 
+const httpsServer = https.createServer(credentials, app);
+
 db.sequelize.sync().then(() => {
-  app.listen(PORT, () => {
-    console.log(`listening on: http://localhost:${PORT}`);
+  httpsServer.listen(PORT, () => {
+    console.log(`listening on: https://localhost:${PORT}`);
   });
 });
