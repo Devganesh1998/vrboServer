@@ -7,6 +7,8 @@ const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const cors = require("cors");
 
+const apiRoutes = require("./app/routes");
+
 const PORT = process.env.PORT || 3000;
 
 var privateKey  = fs.readFileSync('sslcert/privkey.pem', 'utf8');
@@ -26,7 +28,6 @@ app.get('/info', (req, res) => {
   res.send("Welcome to Vrbo Server");
 });
 
-const apiRoutes = require("./Routes");
 app.use("/", apiRoutes);
 
 const httpsServer = https.createServer(credentials, app);
