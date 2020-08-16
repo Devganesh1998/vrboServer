@@ -11,10 +11,6 @@ const apiRoutes = require("./app/routes");
 
 const PORT = process.env.PORT || 3000;
 
-var privateKey  = fs.readFileSync('sslcert/privkey.pem', 'utf8');
-var certificate = fs.readFileSync('sslcert/fullchain.pem', 'utf8');
-
-const credentials = {key: privateKey, cert: certificate};
 const db = require("./models");
 
 const app = express();
@@ -30,10 +26,8 @@ app.get('/info', (req, res) => {
 
 app.use("/", apiRoutes);
 
-const httpsServer = https.createServer(credentials, app);
-
 db.sequelize.sync().then(() => {
-  httpsServer.listen(PORT, () => {
-    console.log(`listening on: https://localhost:${PORT}`);
+  app.listen(PORT, () => {
+    console.log(`listening on: http://localhost:${PORT}`);
   });
 });
